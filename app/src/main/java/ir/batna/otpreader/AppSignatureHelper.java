@@ -24,7 +24,6 @@ import java.util.Map;
  *
  */
 
-
 public class AppSignatureHelper extends ContextWrapper {
 
     public static final String TAG = AppSignatureHelper.class.getName();
@@ -40,7 +39,9 @@ public class AppSignatureHelper extends ContextWrapper {
         getListOfInstalledApp();
     }
 
-    /** To get all apps packageName ********************************************************/
+    /**************************************************
+     * To get all apps installed on phone packageName *
+     *************************************************/
     private void getListOfInstalledApp(){
         final PackageManager pm = getPackageManager();
         appList = new ArrayList<>();
@@ -53,7 +54,9 @@ public class AppSignatureHelper extends ContextWrapper {
         }
     }
 
-    /** To get all apps signature and store in map file with related packageName ***********/
+    /*****************************************************************************
+     *  To get all apps signature and store in map file with related packageName *
+     ****************************************************************************/
     public Map<String,String> getAllAppSignature(){
         AppSignatureHelper appSignature = new AppSignatureHelper(this);
         packageNameAndHashKey = new HashMap<>();
@@ -64,7 +67,6 @@ public class AppSignatureHelper extends ContextWrapper {
         return packageNameAndHashKey;
     }
 
-
     /**
      * Obtain the app signatures for the specific packageName
      * @return Hash key of specific app
@@ -74,7 +76,6 @@ public class AppSignatureHelper extends ContextWrapper {
         ArrayList<String> appCodes = new ArrayList<>();
 
         try {
-           // String packageName = getPackageName();
             PackageManager packageManager = getPackageManager();
             Signature[] signatures = packageManager.getPackageInfo(packageName,
                     PackageManager.GET_SIGNATURES).signatures;

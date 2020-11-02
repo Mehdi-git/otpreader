@@ -10,23 +10,22 @@ import android.util.Log;
 
 import java.util.Map;
 
+import ir.batna.otpreader.utils.Constants;
+
 /**
  * Created by Mehdi-git on October 26,2020
  * This class usage is to receive OTP message and send otp code to related app
- *
+ * <p>
  * Note: Format of OTP SMS should be like this:     <#>Your verification code is:123456.   KQYoHz5XP4y
- *
- * digit numbers between colon and until dot will be otp code
+ * <p>
+ * Digit numbers between colon and dot will be otp code
  * and characters after dot will be recognized as Hash key.
  * Hash key must be 11 characters.
- *
- *
  */
 
 public class SmsReceiver extends BroadcastReceiver {
 
     //Package name of sms retriever library
-    private final String BATNA_LIBRARY_PACKAGE_NAME = "ir.batna.smsretrieverlibrary.SmsRetriever";
     public static final String TAG = AppSignatureHelper.class.getName();
     private Map<String, String> map;
     private String msgBody;
@@ -34,14 +33,13 @@ public class SmsReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
-        Log.d("MBD", "broadcast received sms");
+        Log.d(TAG, "Broadcast has received sms");
 
         //Using goAsync() method is for do process in background for make more time (10 seconds)
         final PendingResult result = goAsync();
         final Thread thread = new Thread() {
             public void run() {
                 int i = 999;
-                // Do processing
                 getSmsAndSendBroadcast(context, intent);
                 result.setResultCode(i);
                 result.finish();
@@ -50,8 +48,8 @@ public class SmsReceiver extends BroadcastReceiver {
         thread.start();
     }
 
-    /*************************************
-     * Entire work handle by this method *
+    /**************************************
+     * Entire work handles by this method *
      *************************************/
     private void getSmsAndSendBroadcast(Context context, Intent intent) {
 
@@ -67,9 +65,8 @@ public class SmsReceiver extends BroadcastReceiver {
                         msg[i] = SmsMessage.createFromPdu((byte[]) pdus[i]);
                         senderNumber = msg[i].getOriginatingAddress();
                         msgBody = msg[i].getMessageBody();
-                        Log.d("MBD", "message received body is: " + msgBody);
-                        Log.d("MBD", "message sender number is: " + senderNumber);
-
+                        Log.d(TAG, "Message body:" + msgBody);
+                        Log.d(TAG, "Message sender number:" + senderNumber);
                     }
                 } catch (Exception e) {
                     Log.d(TAG, e.getMessage());
@@ -79,18 +76,19 @@ public class SmsReceiver extends BroadcastReceiver {
 
         try {
 
-            if (msgBody != null) {
+            if (msgBody != null && msgBody.startsWith(Constants.OTP_SIGNATURE)) {
 
                 //to extract otp code and hash code from sms body
-                String otpCode = extractCodeAndHashFromSms(msgBody).getString("code");
+                String otpCode = extractCodeAndHashFromSms(msgBody).getString(Constants.CODE_KEY);
 
                 //String myHash = extractCodeAndHashFromSms(msgBody).getString("hash");
-                String hashKey = extractCodeAndHashFromSms(msgBody).getString("hash");
+                String hashKey = extractCodeAndHashFromSms(msgBody).getString(Constants.HASH_KEY);
 
                 //to get packageName from related hash
                 String packageName = getPackageNameByHash(context, hashKey);
 
                 if (otpCode != null & packageName != null) {
+
                     //for send broadcast directly without using service
                     sendBroadcast(context, otpCode, packageName);
 
@@ -98,7 +96,7 @@ public class SmsReceiver extends BroadcastReceiver {
                     //sendSmsToService(context, myCode, myHash);
 
                 } else {
-                    Log.d("MBD", "PackageName Or code NOT available ");
+                    Log.d(TAG, "PackageName or OTP code NOT available ");
                 }
             }
         } catch (Exception e) {
@@ -110,36 +108,37 @@ public class SmsReceiver extends BroadcastReceiver {
      * To extract OTP code and hash key from SMS body *
      **************************************************/
     private Bundle extractCodeAndHashFromSms(String msgBody) {
-        String rowCode = null;
-        String pureHash = null;
-        StringBuilder pureCode = new StringBuilder();
+        String trimmedSms = null;
+        String hash = null;
+        StringBuilder code = new StringBuilder();
         Bundle bundle = new Bundle();
 
         //to remove all character before clone ":"
-        for (int i = 0; i <= msgBody.length() - 1; i++) {
+        for (int i = 0; i < msgBody.length(); i++) {
             if (msgBody.charAt(i) == ':') {
-                rowCode = msgBody.substring(i + 1);
-                Log.d("MBD", "Row code is:" + rowCode);
+                trimmedSms = msgBody.substring(i + 1);
             }
         }
-        if (rowCode != null)
-            for (char c : rowCode.toCharArray()) {
+        if (trimmedSms != null) {
+
+            for (char c : trimmedSms.toCharArray()) {
                 if (c != ' ') {
                     if (c == '.') {
                         break;
                     }
-                    pureCode.append(c);
+                    code.append(c);
                 }
             }
 
-        for (int p = 0; p <= rowCode.length()-1; p++) {
-            if (rowCode.charAt(p) == '.') {
-                pureHash = rowCode.substring(p + 1).trim();
+            for (int p = 0; p < trimmedSms.length(); p++) {
+                if (trimmedSms.charAt(p) == '.') {
+                    hash = trimmedSms.substring(p + 1).trim();
+                }
             }
         }
 
-        bundle.putString("code",pureCode.toString());
-        bundle.putString("hash",pureHash);
+        bundle.putString(Constants.CODE_KEY, code.toString());
+        bundle.putString(Constants.HASH_KEY, hash);
         return bundle;
     }
 
@@ -149,10 +148,9 @@ public class SmsReceiver extends BroadcastReceiver {
     private String getPackageNameByHash(Context context, String hashKey) {
         AppSignatureHelper helper = new AppSignatureHelper(context);
 
-        //this map file contains packageNames of all software which
+        // this map file contains packageNames of all software which
         // installed on phone including related hash key
         map = helper.getAllAppSignature();
-
         return map.get("[" + hashKey + "]");
     }
 
@@ -160,12 +158,12 @@ public class SmsReceiver extends BroadcastReceiver {
      * To send Broadcast including otp code to Batna library *
      ********************************************************/
     private void sendBroadcast(Context context, String code, String packageName) {
-        Log.d("MBD", "Broadcast sent! ");
         Intent intent = new Intent();
-        intent.setComponent(new ComponentName(packageName, BATNA_LIBRARY_PACKAGE_NAME));
-        intent.putExtra("CODE", code);
+        intent.setComponent(new ComponentName(packageName, Constants.BATNA_LIBRARY_PACKAGE_NAME));
+        intent.putExtra(Constants.CODE_KEY, code);
         intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
         context.sendBroadcast(intent);
+        Log.d(TAG, "Broadcast sent! ");
     }
 
     /******************************************************************
@@ -174,8 +172,8 @@ public class SmsReceiver extends BroadcastReceiver {
     private void sendSmsToService(Context context, String code, String hashKey) {
         Log.d("MBD", "Sms sent to the service");
         Intent i = new Intent(context, SmsService.class);
-        i.putExtra("HASH", hashKey);
-        i.putExtra("CODE", code);
+        i.putExtra(Constants.HASH_KEY, hashKey);
+        i.putExtra(Constants.CODE_KEY, code);
         SmsService.enqueueWork(context, i);
     }
 }
