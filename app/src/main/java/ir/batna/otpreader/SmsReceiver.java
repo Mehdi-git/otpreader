@@ -26,7 +26,7 @@ import ir.batna.otpreader.utils.Constants;
 public class SmsReceiver extends BroadcastReceiver {
 
     //Package name of sms retriever library
-    public static final String TAG = AppSignatureHelper.class.getName();
+    public static final String TAG = SmsReceiver.class.getName();
     private Map<String, String> map;
     private String msgBody;
 
@@ -53,7 +53,7 @@ public class SmsReceiver extends BroadcastReceiver {
      *************************************/
     private void getSmsAndSendBroadcast(Context context, Intent intent) {
 
-        if (intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED")) {
+        if (intent.getAction().equals(Constants.SMS_ACTION_NAME)) {
             Bundle bundle = intent.getExtras();
             SmsMessage[] msg;
             String senderNumber;
@@ -113,14 +113,17 @@ public class SmsReceiver extends BroadcastReceiver {
         StringBuilder code = new StringBuilder();
         Bundle bundle = new Bundle();
 
-        //to remove all character before clone ":"
-        for (int i = 0; i < msgBody.length(); i++) {
-            if (msgBody.charAt(i) == ':') {
-                trimmedSms = msgBody.substring(i + 1);
+        if(msgBody != null) {
+            //to remove all character before clone ":"
+            for (int i = 0; i < msgBody.length(); i++) {
+                if (msgBody.charAt(i) == ':') {
+                    trimmedSms = msgBody.substring(i + 1);
+                }
             }
         }
-        if (trimmedSms != null) {
 
+        if (trimmedSms != null) {
+            //To get OTP code from message body
             for (char c : trimmedSms.toCharArray()) {
                 if (c != ' ') {
                     if (c == '.') {
@@ -130,6 +133,7 @@ public class SmsReceiver extends BroadcastReceiver {
                 }
             }
 
+            //To get Hash code from message body
             for (int p = 0; p < trimmedSms.length(); p++) {
                 if (trimmedSms.charAt(p) == '.') {
                     hash = trimmedSms.substring(p + 1).trim();
@@ -158,6 +162,7 @@ public class SmsReceiver extends BroadcastReceiver {
      * To send Broadcast including otp code to Batna library *
      ********************************************************/
     private void sendBroadcast(Context context, String code, String packageName) {
+
         Intent intent = new Intent();
         intent.setComponent(new ComponentName(packageName, Constants.BATNA_LIBRARY_PACKAGE_NAME));
         intent.putExtra(Constants.CODE_KEY, code);
@@ -170,10 +175,11 @@ public class SmsReceiver extends BroadcastReceiver {
      * To send hash and code to service and do the process in service *
      *****************************************************************/
     private void sendSmsToService(Context context, String code, String hashKey) {
-        Log.d("MBD", "Sms sent to the service");
+
         Intent i = new Intent(context, SmsService.class);
         i.putExtra(Constants.HASH_KEY, hashKey);
         i.putExtra(Constants.CODE_KEY, code);
         SmsService.enqueueWork(context, i);
+        Log.d(TAG, "Code and hash sent to the JobIntentService");
     }
 }

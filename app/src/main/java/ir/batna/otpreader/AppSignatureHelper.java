@@ -33,7 +33,6 @@ public class AppSignatureHelper extends ContextWrapper {
     private List<String> appList ;
     private Map<String,String> packageNameAndHashKey;
 
-
     public AppSignatureHelper(Context context) {
         super(context);
         getListOfInstalledApp();
@@ -54,9 +53,10 @@ public class AppSignatureHelper extends ContextWrapper {
         }
     }
 
-    /*****************************************************************************
-     *  To get all apps signature and store in map file with related packageName *
-     ****************************************************************************/
+    /*******************************************************************************
+     *  To get all apps signature and store in map file with related packageName   *
+     *  @return Map file which contains all apps packageName with related hash key *
+     ******************************************************************************/
     public Map<String,String> getAllAppSignature(){
         AppSignatureHelper appSignature = new AppSignatureHelper(this);
         packageNameAndHashKey = new HashMap<>();

@@ -16,46 +16,35 @@ import ir.batna.otpreader.utils.Constants;
 
 public class SmsService extends JobIntentService {
 
-    public static final String TAG = AppSignatureHelper.class.getSimpleName();
+    public static final String TAG = SmsService.class.getSimpleName();
     private static final int JOB_ID = 55;
     Map<String, String> map;
 
     public static void enqueueWork(Context context, Intent intent) {
-        Log.d("MBD", "job  Received! ");
+        Log.d(TAG, "job  Received! ");
         enqueueWork(context, SmsService.class, JOB_ID, intent);
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d("MBD", "job Service created! ");
-
     }
-
 
     @Override
     protected void onHandleWork(@NonNull Intent intent) {
-
-        Log.d("MBD", "job Started! ");
 
         AppSignatureHelper helper = new AppSignatureHelper(this);
         map = helper.getAllAppSignature();
 
         String otpCode = intent.getStringExtra(Constants.CODE_KEY);
         String hashKey = intent.getStringExtra(Constants.HASH_KEY);
-
-        Log.d("MBD", "hash is =" + hashKey);
-
         String packageName = getPackageNameByHashKey(hashKey);
-
-        Log.d("MBD", "PackageName  =" + packageName + "  OTP =" + otpCode + "  hash =" + hashKey);
 
         if (otpCode != null && packageName != null) {
             sendBroadcast(this, otpCode, packageName, Constants.BATNA_LIBRARY_PACKAGE_NAME);
         } else {
-            Log.d("MBD", "Package name or code not provided");
+            Log.d(TAG, "Package name or code not provided");
         }
-
     }
 
     @Override
@@ -71,7 +60,6 @@ public class SmsService extends JobIntentService {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Log.d("MBD", "Service has destroyed");
     }
 
     private String getPackageNameByHashKey(String hashKey) {
@@ -79,15 +67,12 @@ public class SmsService extends JobIntentService {
     }
 
     private void sendBroadcast(Context context, String code, String packageName, String packageAndClass) {
-        Log.d("MBD", "Broadcast send! ");
 
+        Log.d(TAG, "Broadcast sent by JobIntentService! ");
         Intent intent = new Intent();
         intent.setComponent(new ComponentName(packageName, packageAndClass));
         intent.putExtra(Constants.CODE_KEY, code);
         intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
         context.sendBroadcast(intent);
-
     }
-
-
 }
